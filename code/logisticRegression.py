@@ -147,7 +147,27 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
     test_set_x , test_set_y = datasets[2]
 
     #Compute number of minibatches for training, validation and testing
+    n_train_batches = train_set_x.get_value(borrow=True).shape[0]/batch_size
+    n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]/batch_size
+    n_test_batches = test_set_x.get_value(borrow=True).shape[0]/batch_size
 
+    #######################
+    #-BUILD ACTUAL MODEL-#
+    #######################
+
+
+    print "...BUILDING MODEL.."
+    
+    #Allocate symbolic variables for the data
+    index = t.lscalar() #Index to a minibatch
+    x = T.matrix('x') #Data is presented as rasterized images
+    y = T.ivector('y') #Targets are provided as a 1D vector of integer values
+
+    #Construct the logistic regression object from the class. 
+    #Each MNIST image is a 28x28 image
+    classifier = LogisticRegression(input=x, n_in=28*28, n_out = 10)
+
+    
 
 
 
