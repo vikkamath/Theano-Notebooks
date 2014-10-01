@@ -57,6 +57,64 @@ class LogisticRegression(object):
         #Check if y has the same dimension as the predictions
         if y.ndim != self.y_pred.ndim:
             raise TypeError('y should have the same dimension as self.y_pred')
+
+        #Check if y is of the correct datatype: 
+
+        #Currently, this function (that calculates the error over the minibatch)
+        #       is only implemented for integer targets
+        if y.dtype.startswith('int'):
+           #T.neq operator returns 1 when there two values (here at positions in vectors)
+           #        don't equal each other and 0 if they do equal each other. 
+           return T.mean(T.neq(self.y_pred,y))
+
+        else:
+           raise NotImplementedError()
+
+def load_data(dataset):
+
+    """
+    Loads the dataset
+    param: dataset - path to the dataset
+    type: string
+    """
+
+    data_dir,data_file = os.path.split(dataset)
+    f = gzip.open(data_file,'rb')
+    train_set,valid_set,test_set = cPickle.load(f)
+    f.close()
+    #train_set, valid_set, test_set are of the form tuple(input,target)
+    #input : ndarray of dim 2 (matrix)
+    #       each row of which corresponds to an example
+    #target: np.ndarray of 1 dimensions that has as many rows as input 
+    #       each elements corresponds to the label of a row of 'input'
+
+    def shared_dataset(data_xy,borrow=True):
+        """
+        Function that loads the dataset into shared variables
+        
+        The reason the dataset is stored into shared variables is
+        to allow theano to copy it into the GPU memory (when the code
+        is run on a GPU). Since copying data to GPU memory is slow, 
+        initiating a copy process to GPU memory every time a 
+        minibatch is operated on (the default behavior
+        for non-shared variables), creates a huge overhead
+        and hence a decrease in performance. 
+        """
+    
+        data_x , data_y = data_xy
+        shared_x = theano.shared(numpy.asarray(data_x,dtype=theano.config.floatX),borrow=borrow)
+        shared_y = theano.shraed(numpy.asarray(data_y,dtype=theano.config.floatX),borrow=borrow)
+        #When storing data on the GPU, it has to be stored as floats. 
+        #That's what shared_y does. But since the values in y are used also as indices, 
+        #they have to be ints. The hack below works around this. 
+    
+        return shared_x,T.cast(shared_y,'int32')
+
+
+
+
+       
+        
         
 
 
