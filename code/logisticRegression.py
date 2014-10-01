@@ -88,6 +88,7 @@ def load_data(dataset):
     #target: np.ndarray of 1 dimensions that has as many rows as input 
     #       each elements corresponds to the label of a row of 'input'
 
+    #Notice that the function below is a function inside a function
     def shared_dataset(data_xy,borrow=True):
         """
         Function that loads the dataset into shared variables
@@ -109,6 +110,66 @@ def load_data(dataset):
         #they have to be ints. The hack below works around this. 
     
         return shared_x,T.cast(shared_y,'int32')
+
+    train_set_x , train_set_y = shared_dataset(train_set)
+    valid_set_x , valid_set_y = shared_dataset(valid_set)
+    test_set_x , test_set_y = shared_dataset(test_set)
+
+    rval = [(train_set_x, train_set_y), (valid_set_x,valid_set_y), (test_set_x,test_set_y)]
+
+    return rval
+
+
+def sgd_optimization_mnist(learning_rate=0.13 ,
+                            n_epochs=1000,
+                            dataset='mnist.pkl.gz',
+                            batch_size=600):
+
+    """
+    Demonstrates SGD optimization of a log-linear model.
+    Here, this is demonstrated on MNIST
+
+    :type learning_rate: float
+    :param learning_rate: learning rate used (factor for SGD)
+
+    :type n_epochs: int
+    :param n_epochs: maximal number of epochs to run the optimizer
+
+    :type dataset: string
+    :param dataset: The path to the pickled MNIST dataset file. 
+                    Originally from: http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz
+
+    """
+
+    datasets = load_data(dataset)
+    train_set_x , train_set_y = datasets[0]
+    valid_set_x , valid_set_y = datasets[1]
+    test_set_x , test_set_y = datasets[2]
+
+    #Compute number of minibatches for training, validation and testing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
