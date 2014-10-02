@@ -167,6 +167,63 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
     #Each MNIST image is a 28x28 image
     classifier = LogisticRegression(input=x, n_in=28*28, n_out = 10)
 
+    #The cost we minimize during training is the negative log likelihood
+    #           of the model in symbolic format - that's usually how Theano operations
+    #           are defined. i.e. 'functions' are first defined symbolically and
+    #           then the theano.function is used to create a 'compliled' function
+    cost = classifier.negative_log_likelihood(y)
+
+    #Compiling a theano function that computes the error made on the minibatch 
+    #   by the model 
+    #NOTE: I haven't understood what the function below is doing completely
+    test_model = theano.function(inputs=[index],
+            outputs = classifer.errors(y),
+            givens = {
+                x : test_set_x[index*batch_size : (index+1)*batchsize]
+                y : test_set_y[index*batch_size : (index+1)*batchsize]})
+
+    validate_model = theano.function(inputs=[index],
+            outputs = classifier.errors(y),
+            givens = {
+                x : valid_set_x[index*batch_size : (index+1)*batchsize]
+                y : valid_set_y[index*batch_size : (index+1)*batchsize]
+
+    #Compute the gradient of the cost with respect to theta = (W,b)
+    g_W = T.grad(cost=cost,wrt=classifier.W)
+    g_b = T.grad(cost=cost,wrt=classifier.b)
+
+    #Specify how to update the parameters of the model 
+    #   Updates are specified as a list of (variable, update_expression) pairs
+    updates = [(classifier.W, classifer.W - learning_rate*g_W),
+               (classifier.b, classifer.b - learning_rate*g_b)]
+
+
+    #Compile a theano function train_model that returns the cost but 
+    #   at the same time updates the parameters of the model using the update rule
+    #   specified as above. 
+    train_model = theano.function(inputs = [index],
+            outputs = cost, 
+            updates = updates, 
+            givens = {
+                x : train_set_x[index*batch_size : (index+1)*batch_size]
+                y : train_set_y[index*batch_size : (index+1)*batch_size]})
+
+
+    ###############
+    #-TRAIN MODEL-#
+    ###############
+
+    print '....Training the model....'
+
+    #Early stopping parameters
+    patience = 5000 #Look at atleast 5000 examples
+    patience_increase = 2 #Wait this much longer if a new best is found
+    improvement_threshold = 0.095 #An improvement is considered significant
+                                  #if it exceeds this threshold. 
+
+
+
+
     
 
 
