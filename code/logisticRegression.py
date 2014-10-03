@@ -1,3 +1,4 @@
+#!/share/imagedb/kamathv1/anaconda/bin/python
 #Code that does logistic Regression. Duh
 #From deeplearning.net
 
@@ -17,18 +18,18 @@ class LogisticRegression(object):
     def __init__(self,input,n_in,n_out):
 
         #Define model parameters W and b
-        self.W = theano.shared(value=numpy.zeros((n_in,n_out), dtype=theano.config.floatX),name='W')
-	self.b = theano.shared(value=numpy.zeros((n_out,),dtype=theano.config.floatX),name='b')
+        self.W = theano.shared(value=np.zeros((n_in,n_out), dtype=theano.config.floatX),name='W')
+	self.b = theano.shared(value=np.zeros((n_out,),dtype=theano.config.floatX),name='b')
 
 	#Compiled theano function that returns the vector of class probabilities
 	self.p_y_given_x = T.nnet.softmax(T.dot(input,self.W)+self.b)
 	#Symbolic description of how to compute the prediction - i.e the class whose prediction is maximal
-	self.ypred = T.argmax(self.p_y_given_x,axis=1)
+	self.y_pred = T.argmax(self.p_y_given_x,axis=1)
         #Parameters of the model
         self.params = [self.W,self.b]
 
 
-    def negative_log_likelihood(self.y):
+    def negative_log_likelihood(self,y):
 
 
         return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]),y])
@@ -79,6 +80,7 @@ def load_data(dataset):
     """
 
     data_dir,data_file = os.path.split(dataset)
+    data_file = "/home/kamathv1/vikkamath/deepLearning/theano/datasets/mnist.pkl.gz"
     f = gzip.open(data_file,'rb')
     train_set,valid_set,test_set = cPickle.load(f)
     f.close()
@@ -103,8 +105,8 @@ def load_data(dataset):
         """
     
         data_x , data_y = data_xy
-        shared_x = theano.shared(numpy.asarray(data_x,dtype=theano.config.floatX),borrow=borrow)
-        shared_y = theano.shraed(numpy.asarray(data_y,dtype=theano.config.floatX),borrow=borrow)
+        shared_x = theano.shared(np.asarray(data_x,dtype=theano.config.floatX),borrow=borrow)
+        shared_y = theano.shared(np.asarray(data_y,dtype=theano.config.floatX),borrow=borrow)
         #When storing data on the GPU, it has to be stored as floats. 
         #That's what shared_y does. But since the values in y are used also as indices, 
         #they have to be ints. The hack below works around this. 
@@ -122,7 +124,7 @@ def load_data(dataset):
 
 def sgd_optimization_mnist(learning_rate=0.13 ,
                             n_epochs=1000,
-                            dataset='mnist.pkl.gz',
+                            dataset='/home/kamathv1/vikkamath/deepLearning/theano/datasets/mnist.pkl.gz',
                             batch_size=600):
 
     """
@@ -159,7 +161,7 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
     print "...BUILDING MODEL.."
     
     #Allocate symbolic variables for the data
-    index = t.lscalar() #Index to a minibatch
+    index = T.lscalar() #Index to a minibatch
     x = T.matrix('x') #Data is presented as rasterized images
     y = T.ivector('y') #Targets are provided as a 1D vector of integer values
 
@@ -177,16 +179,16 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
     #   by the model 
     #NOTE: I haven't understood what the function below is doing completely
     test_model = theano.function(inputs=[index],
-            outputs = classifer.errors(y),
+            outputs = classifier.errors(y),
             givens = {
-                x : test_set_x[index*batch_size : (index+1)*batchsize]
-                y : test_set_y[index*batch_size : (index+1)*batchsize]})
+                x:test_set_x[index*batch_size : (index+1)*batch_size],
+                y:test_set_y[index*batch_size : (index+1)*batch_size]})
 
     validate_model = theano.function(inputs=[index],
             outputs = classifier.errors(y),
             givens = {
-                x : valid_set_x[index*batch_size : (index+1)*batchsize]
-                y : valid_set_y[index*batch_size : (index+1)*batchsize]
+                x : valid_set_x[index*batch_size : (index+1)*batch_size],
+                y : valid_set_y[index*batch_size : (index+1)*batch_size]})
 
     #Compute the gradient of the cost with respect to theta = (W,b)
     g_W = T.grad(cost=cost,wrt=classifier.W)
@@ -194,8 +196,8 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
 
     #Specify how to update the parameters of the model 
     #   Updates are specified as a list of (variable, update_expression) pairs
-    updates = [(classifier.W, classifer.W - learning_rate*g_W),
-               (classifier.b, classifer.b - learning_rate*g_b)]
+    updates = [(classifier.W, classifier.W - learning_rate*g_W),
+               (classifier.b, classifier.b - learning_rate*g_b)]
 
 
     #Compile a theano function train_model that returns the cost but 
@@ -205,7 +207,7 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
             outputs = cost, 
             updates = updates, 
             givens = {
-                x : train_set_x[index*batch_size : (index+1)*batch_size]
+                x : train_set_x[index*batch_size : (index+1)*batch_size],
                 y : train_set_y[index*batch_size : (index+1)*batch_size]})
 
 
@@ -218,8 +220,75 @@ def sgd_optimization_mnist(learning_rate=0.13 ,
     #Early stopping parameters
     patience = 5000 #Look at atleast 5000 examples
     patience_increase = 2 #Wait this much longer if a new best is found
-    improvement_threshold = 0.095 #An improvement is considered significant
+    improvement_threshold = 0.995 #A relative improvement is considered significant
                                   #if it exceeds this threshold. 
+    validation_frequency = min(n_train_batches , patience / 2)
+                        #Go though this many batches before 
+                        #checking the error on the validation set
+                        #In this case, we check every epoch
+
+    best_params = None
+    best_validation_loss = np.inf
+    test_score = 0.0
+    start_time = time.clock()
+
+    done_looping = False
+    epoch = 0
+    while (epoch < n_epochs) and (not done_looping):
+        epoch = epoch + 1
+        for minibatch_index in xrange(n_train_batches):
+                minibatch_average_cost = train_model(minibatch_index)
+                #Iteration number
+                #NOTE: I haven't understood this calculation
+                iter = (epoch-1) * n_train_batches + minibatch_index
+
+                if (iter+1) % validation_frequency == 0 :
+                    #Compute zero-one loss on validation set
+                    validation_losses = [validate_model(i)
+                                         for i in xrange(n_valid_batches)]
+                    this_validation_loss = np.mean(validation_losses)
+
+                    print('epoch %i , minibatch %i/%i , validation error %f %%' % \
+                            (epoch,minibatch_index + 1, n_train_batches, this_validation_loss*100.))
+
+                    #If we got the best validation loss until now,
+                    if this_validation_loss < best_validation_loss:
+                        #Improve patience if loss improvement is good enough
+                        if this_validation_loss < best_validation_loss * improvement_threshold:
+                            #NOTE: I don't understand the reasoning behind this line
+                            patience = max(patience, iter*patience_increase)
+
+                            best_validation_loss = this_validation_loss
+
+                            #Test it on the test set
+                            test_losses = [test_model(i) for i in xrange(n_test_batches)]
+                            test_score = np.mean(test_losses)
+
+                            #NOTE: This print sytax is unfamiliar to me
+                            print(('epoch %i , minibatch %i/%i , test error of best model %f %%') %
+                                    (epoch, minibatch_index + 1, n_train_batches, test_score*100))
+                         
+                        if patience <= iter:
+                            done_looping = True
+                            break
+
+    end_time = time.clock() 
+    print(('Optimization Complete with best validation score of %f %%, with test performance of %f, %%') %
+            (best_validation_loss * 100. , test_score * 100))
+    print 'The code ran for %d epochs at %f epochs/sec' *( 
+          epoch, 1. * epoch / (end_time - start_time))
+    
+if __name__ == "__main__":
+    sgd_optimization_mnist()
+
+
+
+
+
+
+
+
+
 
 
 
