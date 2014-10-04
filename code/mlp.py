@@ -108,8 +108,115 @@ class MLP(object):
         :param n_out: number of hidden units in the layer. 
         :           i.e. the dimension of the space the labels lie in. 
         :type n_out: int
+        """
+
+        #Since we're dealing with an MLP with one hidden layer, 
+        #   it is equivalent to being a network with one layer of 
+        #   tanh activation units connected to a logistic regression layer
+        self.hiddenLayer = HiddenLayer(rng=rng,input=input,n_in=n_in,n_out=n_hidden,
+                activation=T.tanh)
+
+        #The logisticRegression layer has as inputs, the hidden units of the hidden layer
+        self.logRegressionLayer = LogisticRegression(
+                input=self.hiddenLayer.output,
+                n_in = n_hidden,
+                n_out = n_out)
+
+        #Regularization:
+        #1. L1 Norm
+        #One method of regularization is to ensure that the L1 norm is small
+        self.L1 = abs(self.hiddenLayer.W).sum() \
+                + abs(self.logRegressionLayer.W).sum()
+        #2. Squared L2 Norm
+        #Another regularization method is to ensure that the square of the L2 norm
+        #   is small
+        self.L2_sqr = (self.hiddenLayer.W**2).sum() \
+                + (self.logRegressionLayer.W **2).sum()
+
+        #Negative log likelihood of the MLP is given by the Negative log likelihood of 
+        #   the output of the model, as computed by the LogisticRegression layer. 
+        self.negative_log_likelihood = self.LogisticRegression.negative_log_likelihood
+        #same holds for the funtion computing the number of errors
+        self.errors = self.LogisticRegression.errors
+
+        #the parameters of the model are the the parameters of the two layers
+        #   that it is made up of 
+        self.params = self.hiddenLayer.params + self.logRegressionLayer.params
+
+def test_mlp(learning_rate = 0.01, 
+            L1_reg = 0.00,
+            L2_reg = 0.0001,
+            n_epochs = 1000,
+            dataset = 'mnist.pkl.gz',
+            batch_size = 20,
+            n_hidden=500):
+    """
+    This method implements stochastic gradient descent for an MLP. 
+    This is demonstrated on MNIST.
+
+    :param learning_rate: Learning rate
+    :type learning_rate: float
+
+    :param L1_reg: l1 norm's weight when added to the cost 
+    :type L1_reg: float
+
+    :param L1_reg: l2 norm's weight when added to the cost
+    :type L2_reg: float
+
+    :param n_epoch: maximum number of epochs to run the optimizer
+    :type n_epoch: int
+
+    :param dataset: Path to the dataset, here MNIST. 
+    :type dataset: string
+
+    :param batch_size: size of the minibatches
+    :type batch_size: int
+
+    :param n_hidden: number of hidden units in the hidden layer
+    :type n_hidden: int
+    """
+
+    datasets = load_data(dataset)
+
+    train_set_x,train_set_y = datasets[0]
+    valid_set_x,valid_set_y = datasets[1]
+    test_set_x,test_set_y = datasets[2]
+
+    #Compute number of minibatches for training, validation and testing
+    n_train_batches = train_set_x.get_value(borrow=True).shape[0]/batch_size
+    n_valid_batches = valid_set_x.get_value(borrow=True).shape[1]/batch_size
+    n_test_batches = test_set_x.get_value(borrow=True).shape[2]/batch_size
 
 
+    ###############
+    #-BUILD MODEL-#
+    ###############
+
+    print '.........BUILDING MODEL..............'
+
+    #Allocate symbolic variables for the data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
 
             
 
