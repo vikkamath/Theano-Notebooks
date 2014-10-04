@@ -63,6 +63,19 @@ class HiddenLayer(object):
             W = theano.shared(value = W_values,name = "W",borrow = True)
         
         if b is None: 
+            b_values = np.zeros((n_out,),dtype=theano.config.floatX)
+            b = theano.shared(value=b_values,name="b",borrow=True)
+
+        self.W = W
+        self.b = b
+
+        #NOTE: I think the logic for this is that if the activation
+        #       is 'none', then assume that it's a linear unit and just output
+        #       lin_output (which is basically the non-transformed activation)
+        lin_output = T.dot(input,self.W) + b
+        self.output = (lin_output if activation is None
+                      else activation(lin_output))
+            
 
 
 
