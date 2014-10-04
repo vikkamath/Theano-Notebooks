@@ -1,3 +1,4 @@
+#!/share/imagedb/kamathv1/anaconda/bin/python
 #This is code for a MLP with theano
 #Heavily inspired by the code in the tutorial in:
 #       http://deeplearning.net/tutorial/mlp.html#mlp
@@ -56,9 +57,9 @@ class HiddenLayer(object):
             W_values = np.asarray(rng.uniform(
                         low = -np.sqrt(6/ (n_in + n_out)),
                         high = np.sqrt(6/ (n_in + n_out)),
-                        size = (n_in,n_out),
-                        dtype = theano.config.floatX))
-            if activation = theano.tensor.nnet.sigmoid:
+                        size = (n_in,n_out)),
+                        dtype = theano.config.floatX)
+            if activation == theano.tensor.nnet.sigmoid:
                 W_values = W_values * 4 #Refer [Xavier,Bengio '10]
             W = theano.shared(value = W_values,name = "W",borrow = True)
         
@@ -135,9 +136,9 @@ class MLP(object):
 
         #Negative log likelihood of the MLP is given by the Negative log likelihood of 
         #   the output of the model, as computed by the LogisticRegression layer. 
-        self.negative_log_likelihood = self.LogisticRegression.negative_log_likelihood
+        self.negative_log_likelihood = self.logRegressionLayer.negative_log_likelihood
         #same holds for the funtion computing the number of errors
-        self.errors = self.LogisticRegression.errors
+        self.errors = self.logRegressionLayer.errors
 
         #the parameters of the model are the the parameters of the two layers
         #   that it is made up of 
@@ -184,8 +185,8 @@ def test_mlp(learning_rate = 0.01,
 
     #Compute number of minibatches for training, validation and testing
     n_train_batches = train_set_x.get_value(borrow=True).shape[0]/batch_size
-    n_valid_batches = valid_set_x.get_value(borrow=True).shape[1]/batch_size
-    n_test_batches = test_set_x.get_value(borrow=True).shape[2]/batch_size
+    n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]/batch_size
+    n_test_batches = test_set_x.get_value(borrow=True).shape[0]/batch_size
 
 
     ###############
@@ -197,9 +198,9 @@ def test_mlp(learning_rate = 0.01,
     #Allocate symbolic variables for the data
     index = T.lscalar() #Index to a minibatch
     x = T.matrix('x') #MNIST data is present as rasterized images
-    y = T.vector('y') #Labels are presented as a vector of 1D integers
+    y = T.ivector('y') #Labels are presented as a vector of 1D integers
 
-    rng = numpy.random.randomState(1234)
+    rng = np.random.RandomState(1234)
 
     #Construct the MLP class
     classifier = MLP(rng = rng, input=x,
@@ -216,7 +217,7 @@ def test_mlp(learning_rate = 0.01,
     #Compiling a theano function that computes the mistakes that are made 
     #   on a minibatch by the model 
     test_model = theano.function(inputs = [index],
-                outputs = classifer.errors(y),
+                outputs = classifier.errors(y),
                 givens={
                     x: test_set_x[index*batch_size : (index+1)*batch_size],
                     y: test_set_y[index*batch_size : (index+1)*batch_size]})
@@ -258,36 +259,83 @@ def test_mlp(learning_rate = 0.01,
     #-TRAIN MODEL-#
     ###############
 
-    #
+    print '...........TRAINING.............'
+
+    #Early stopping parameters
+    patience = 10000 # Look at this many examples no matter what. 
+    patience_increase = 2 #Wait this much longer when a new best is found
+    improvement_threshold = 0.995 #A relative improvement of this much is considered 
+                                  # significant
+    
+    #NOTE: I don't understand the line of reasoning behind the line below
+    validation_frequency = min(n_train_batches,patience/2)
+                            #Go through this many minibatches
+                            #   before computing the error on the
+                            #   validation set. 
+                            #In this case, we compute the error
+                            #   after every epoch
+   
+    best_params = None
+    best_validation_loss = np.inf
+    best_iter = 0
+    test_score = 0.
+    start_time = time.clock()
+
+    epoch = 0
+    done_looping = False
+
+    while (epoch < n_epochs) and (not done_looping):
+        epoch = epoch + 1
+        for minibatch_index in xrange(n_train_batches):
+
+            minibatch_avg_cost = train_model(minibatch_index)
+            #Iteration Number
+            #NOTE: I don't understand the line below
+            iter = (epoch-1)*n_train_batches + minibatch_index
+
+            if (iter+1) % validation_frequency == 0:
+                #Compute the zero-one loss on the validation set
+                validation_losses = [validate_model(i) for i in 
+                                    xrange(n_valid_batches)]
+                this_validation_loss = np.mean(validation_losses)
                 
+                print('epoch %i, minibatch %i/%i,validation error %f %%' %
+                        (epoch,minibatch_index+1,n_train_batches,
+                            this_validation_loss*100.))
+
+                #If this is the best validation loss so far:
+                if this_validation_loss < best_validation_loss: 
+                    best_validation_loss = this_validation_loss
+                    best_iter = iter
+
+                    #Improve patience if loss improvement is good enough
+                    if this_validation_loss < best_validation_loss \
+                                                *improvement_threshold:
+                        #NOTE: I don't know the logic behind the line below
+                        patience = max(patience,iter*patience_increase)
+
+                    #Test it on the test set
+                    test_losses = [test_model(i) for i in \
+                                    xrange(n_test_batches)]
+                    test_score = np.mean(test_losses)
+
+                    print('epoch %i,minibatch %i/%i, test error of'
+                            'best model so far %f %%' %
+                         (epoch,minibatch_index+1,n_train_batches,test_score*100))
+
+            if patience <= iter:
+                done_looping = True
+                break
+
+    end_time = time.clock()
+    print('Optimization Complete. Best validation score of %f %%'
+          'obtained at iteration %i, with test performance of %f %%' %
+        (best_validation_loss,best_iter,test_score*100))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
+if __name__=="__main__":
+    test_mlp()
             
-
-
 
 
 # vim : tabstop=8 expandtab shiftwidth=4 softabstop=4
