@@ -195,6 +195,73 @@ def test_mlp(learning_rate = 0.01,
     print '.........BUILDING MODEL..............'
 
     #Allocate symbolic variables for the data
+    index = T.lscalar() #Index to a minibatch
+    x = T.matrix('x') #MNIST data is present as rasterized images
+    y = T.vector('y') #Labels are presented as a vector of 1D integers
+
+    rng = numpy.random.randomState(1234)
+
+    #Construct the MLP class
+    classifier = MLP(rng = rng, input=x,
+                    n_in = 28*28, n_hidden = n_hidden,n_out = 10)
+
+    #The cost we minimize during training is the negative log likelihood
+    #   plus the l1 and l2 regularization terms. 
+    #Here, the cost is expressed symbolically
+    cost = classifier.negative_log_likelihood(y) \
+        + L1_reg*classifier.L1 \
+        + L2_reg*classifier.L2_sqr
+
+
+    #Compiling a theano function that computes the mistakes that are made 
+    #   on a minibatch by the model 
+    test_model = theano.function(inputs = [index],
+                outputs = classifer.errors(y),
+                givens={
+                    x: test_set_x[index*batch_size : (index+1)*batch_size],
+                    y: test_set_y[index*batch_size : (index+1)*batch_size]})
+
+    validate_model = theano.function(inputs = [index],
+                    outputs = classifier.errors(y),
+                    givens={
+                        x: valid_set_x[index*batch_size : (index+1)*batch_size],
+                        y: valid_set_y[index*batch_size : (index+1)*batch_size]})
+
+    #Compute the gradient of the cost with respect to theta (stored in params) of the model 
+    #the result will be stored in a list 'gparams'
+    gparams = []
+    for param in classifier.params:
+        gparam = T.grad(cost,param)
+        gparams.append(gparam)
+
+    #Specify how to update the parameters of the model as a list of
+    #   (variable, update expression) pairs
+    updates = []
+    #Given two lists A=[a1,a1,a3,...,an] and B=[b1,b2,b3,...,bn] of the same length (n),
+    #   the 'zip' function generates a third list C that combines A and B to form
+    #   a list of ordered pairs
+    #   i.e. C = [(a1,b1),(a2,b2),...,(an,bn)]
+    for param,gparam in zip(classifier.params,gparams):
+        updates.append((param,param-learning_rate*gparam))
+
+    #Compling a theano function 'train_model' that returns the cost but
+    #   at the same time updates the parameter of the model based on the
+    #   rules in 'updates'
+    train_model = theano.function(inputs=[index],outputs=cost,
+                    updates=updates,
+                    givens={
+                        x: train_set_x[index*batch_size:(index+1)*batch_size],
+                        y: train_set_y[index*batch_size:(index+1)*batch_size]})
+
+
+    ###############
+    #-TRAIN MODEL-#
+    ###############
+
+    #
+                
+
+
 
 
 
