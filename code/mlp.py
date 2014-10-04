@@ -75,6 +75,42 @@ class HiddenLayer(object):
         lin_output = T.dot(input,self.W) + b
         self.output = (lin_output if activation is None
                       else activation(lin_output))
+        
+        #Parameters of the model
+        self.params = [self.W,self.b]
+
+
+class MLP(object):
+    """
+    Multi Layer Perceptron Class
+    Intermediate Layers have a non-linear activation fn - tanh or sigmoid
+    The top layer is a softmax layer
+    """
+
+    def __init__(self,rng,input,n_in,n_hidden,n_out):
+        """
+        Initialize the parameters of the MLP
+    
+        :param rng : a random number generator used to initialize weights
+        :type rng: numpy.random.RandomState
+    
+        :param input: symbolic variable that describes the input of the architecture
+                        (one minibatch)
+        :type input: theano.tensor.TensorType
+    
+        :param n_in: number of input units (the dimensionality of the space
+        :           in which the datapoints live)
+        :type n_in: int
+
+        :param n_hidden: number of hidden units
+        :type n_hidden: int
+        
+        :param n_out: number of hidden units in the layer. 
+        :           i.e. the dimension of the space the labels lie in. 
+        :type n_out: int
+
+
+
             
 
 
