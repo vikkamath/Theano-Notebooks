@@ -1,6 +1,7 @@
 #!/share/imagedb/kamathv1/anaconda/bin/python
 #Code that does logistic Regression. Duh
 #From deeplearning.net
+#Author: Vik Kamath
 
 #Imports to process dataset - MNIST
 import cPickle
